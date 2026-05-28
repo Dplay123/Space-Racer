@@ -1,0 +1,713 @@
+ <!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Movment Nave</title>
+        <style>
+          body {
+              margin: 0;
+              overflow: hidden;
+          }
+
+          @font-face {
+            font-family: 'font';
+            src: url('./fonts/Play Pretend.otf');
+          }
+          #interfaz {
+            font-family: 'font';
+            background-color: black;
+            color: white;
+            font-size: 26px;
+            position: fixed; 
+            top: 0; 
+            left: 0;
+            z-index: 1; 
+            width: 100%;
+            height: 200px;
+            background-color: transparent; 
+            margin-top: 1%;
+            margin-left: 1%;
+          /* otros estilos para la barra de navegación */ 
+        }
+        #avisoo{
+          font-size: 100px;
+          margin: auto;
+          padding: auto;
+          color: red;
+        }
+        </style>
+    </head>
+    <body>
+       <canvas id="mycanvas"></canvas> 
+      <div id="interfaz">
+      <div id="miDivdis">Puntos: <span id="puntos" style="opacity: 1;" str></span></div>
+      <div id="miDivalt">Salud: <span id="salud" style="opacity: 1;"></span></div>
+          
+      <div id="miDiv" style=" width: 50%; margin: auto;"> 
+          
+          <span id="avisoo"></span> <br>
+          
+          <button id="botonReiniciar" 
+          style="width: 400px; height: 60px; 
+          background-color: black; 
+          color: white;
+          border: none;
+          font-size: 30px;
+          font-family: 'font';
+          margin: auto;
+          opacity: 0;
+          " onclick="location.reload()">REINICIAR
+          </button>
+        </div>
+
+        
+        <script type="importmap">
+          {
+            "imports": {
+            "three": "./js/three.module.js",
+            "three/OrbitControls": "./js/OrbitControls.js",
+            "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@latest/dist/cannon-es.js",
+            "cannon-debugger": "./js/cannon-es-debugger.js"
+            }
+          }
+      </script>
+<script type="module">
+      
+  import * as THREE from './js/three.module.js';
+  import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@latest/dist/cannon-es.js';
+  import CannonDebugger from './js/cannon-es-debugger.js'
+  import { OrbitControls } from './js/OrbitControls.js';
+  import{RoundedBoxGeometry} from './js/RoundedBoxGeometry.js';
+  import Obj1 from './obj/Nave.js';
+
+  //render
+
+var renderer = new THREE.WebGLRenderer({canvas: document.getElementById('mycanvas'), antialias: true});
+//renderer.setClearColor(0xffcd85);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+
+var scene =new THREE.Scene();
+var gridHelper = new THREE.GridHelper( 1000, 1000 );
+//scene.add( gridHelper );
+
+
+//Creacion del mundo y gravedad hermano
+
+var world = new CANNON.World();
+world.broadphase = new CANNON.SAPBroadphase(world);
+world.gravity.set(0, -9.82, 0); // Gravedad usando cannon
+world.defaultContactMaterial.friction=0;
+
+var groundMaterial = new CANNON.Material("groundMaterial");
+var wheelMaterial = new CANNON.Material("wheelMaterial");
+var wheelGroundMaterial = new CANNON.ContactMaterial(
+  wheelMaterial, groundMaterial, {
+    friction: 0.3,
+    restitution: 0,
+    contactEquationStiffness: 1000
+});
+
+world.addContactMaterial(wheelGroundMaterial);
+
+var cannonDebug = new CannonDebugger(scene, world); ///////// se genera un debugger que permite "ver" las aristas de las geometrias usadas en el cannon (un helper)
+
+const groundBody = new CANNON.Body({
+type: CANNON.Body.STATIC,
+shape: new CANNON.Plane(),
+});
+groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);/// elplano aparece vertical, asíq ue hay que girarlo para que quede acostado
+groundBody.position.y=0;
+world.addBody(groundBody);//////////////////////////////////////// configuración del mundo cannon
+
+
+//camara y orbit controls
+var camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 3000);
+camera.position.set(0,15,-80);
+
+var controls = new OrbitControls(camera, renderer.domElement); ////////////camara
+
+//luz
+
+var light = new THREE.PointLight(0x1BB3FF, 2.0, 200);
+light.castShadow = true;
+light.shadow.bias = 0.0001;
+light.shadow.mapSize.width = 2048 * 2;
+light.shadow.mapSize.height = 2048 * 2;
+light.position.set(60, 60, 10);
+var light2 = new THREE.AmbientLight(0xffffff, .3);
+scene.add(light, light2); //////////////////////////////// luces
+
+
+//Figurones para el juego perron hemano
+
+//carriles
+
+var p1 = new THREE.BoxGeometry(20,10,20000);
+var m1 = new THREE.MeshLambertMaterial ({
+        color: 0xF54927, side: THREE.DoubleSide,transparent: true, opacity: 0
+    });
+var mesh01 = new THREE.Mesh(p1,m1);
+mesh01.position.set(0,-5,960)
+scene.add(mesh01);
+
+var p2 = new THREE.BoxGeometry(20,10,20000);
+var m2 = new THREE.MeshLambertMaterial ({
+        color: 0xFFFFFF, side: THREE.DoubleSide,transparent: true, opacity: 0
+    });
+var mesh02 = new THREE.Mesh(p2,m2);
+mesh02.position.set(-20,-5,960)
+scene.add(mesh02);
+
+var p3 = new THREE.BoxGeometry(20,10,20000);
+var m3 = new THREE.MeshLambertMaterial ({
+        color: 0xFFFFFF, side: THREE.DoubleSide,transparent: true, opacity: 0
+    });
+var mesh03 = new THREE.Mesh(p3,m3);
+mesh03.position.set(20,-5,960);
+scene.add(mesh03);
+
+var p4 = new THREE.BoxGeometry(10,60,20000);
+var m4 = new THREE.MeshLambertMaterial ({
+        color: 0xFFFFFF, side: THREE.DoubleSide,transparent: true, opacity: 0
+    });
+var mesh04 = new THREE.Mesh(p4,m4);
+mesh04.position.set(35,5,960);
+scene.add(mesh04);
+
+var p9 = new THREE.BoxGeometry(10,60,20000);
+var m9 = new THREE.MeshLambertMaterial ({
+        color: 0xFFFFFF, side: THREE.DoubleSide,transparent: true, opacity: 0
+    });
+var mesh09 = new THREE.Mesh(p9,m9);
+mesh09.position.set(-35,5,960);
+scene.add(mesh09);
+
+var p10 = new THREE.BoxGeometry(10,60,80);
+var m10 = new THREE.MeshLambertMaterial ({
+        color: 0xFFFFFF, side: THREE.DoubleSide,transparent: true, opacity: 0
+    });
+var mesh10 = new THREE.Mesh(p10,m10);
+mesh10.position.set(0,5,-40);
+mesh10.rotation.set(0,1.57,0)
+scene.add(mesh10);
+
+//obstaculones
+var ob1 = new THREE.BoxGeometry(5,5,5);
+var m5 = new THREE.MeshLambertMaterial ({
+        color: 0xFFFFFF, side: THREE.DoubleSide
+    });
+var mesh05 = new THREE.Mesh(ob1,m5);
+mesh05.position.set(11,2.5,32);
+mesh05.rotation.set(0,1.57,0);
+scene.add(mesh05);
+
+var ob2 = new THREE.BoxGeometry(5,5,5);
+var m6 = new THREE.MeshLambertMaterial ({
+        color: 0xFFFFFF, side: THREE.DoubleSide
+    });
+var mesh06 = new THREE.Mesh(ob1,m5);
+mesh06.position.set(-22,2.5,-40);
+mesh06.rotation.set(0,1.57,0);
+scene.add(mesh06);
+
+
+var ob3 = new THREE.SphereGeometry(2.5,50);
+var m7 = new THREE.MeshLambertMaterial ({
+        color: 0xFFFFFF, side: THREE.DoubleSide
+    });
+var mesh07 = new THREE.Mesh(ob3,m7);
+mesh07.position.set(0,2.5,32);
+scene.add(mesh07);
+
+var ob4 = new THREE.SphereGeometry(2.5,50);
+var m8 = new THREE.MeshLambertMaterial ({
+        color: 0xE6EB1C, side: THREE.DoubleSide
+    });
+var mesh08 = new THREE.Mesh(ob4,m8);
+mesh08.position.set(0,2.5,40);
+
+scene.add(mesh08);
+
+
+//nave perrona
+
+var ob1= Obj1({x: 0, y: 0, z: 0});
+//scene.add(ob1);
+ob1.position.set(0, 0, 0);
+ob1.scale.set(0.5,0.5,0.5);
+
+var ob2 = new THREE.Group();
+ob2.add(ob1,camera);
+scene.add(ob2);
+ob2.position.set(0, 25, 0);
+
+//Bodys para el juego, obstculenes, carriles, haters y de mas weas perronas osi osi
+
+const nave = new CANNON.Body({ 
+mass: 1,
+position:new CANNON.Vec3(0,0,0),
+shape: new CANNON.Box(new CANNON.Vec3(4,2.5,4))
+});
+nave.position.copy(ob2.position);
+world.addBody(nave); ///////////////// cuerpo "fisico" de la caja
+
+
+//estrellitas perronas para el fondo
+const estrellasGeo = new THREE.BufferGeometry();
+const estrellasCount = 1000;
+const posiciones = new Float32Array(estrellasCount*3);
+
+for(let i=0;i<estrellasCount*3;i+=3){
+  posiciones[i]=(Math.random()-0.5)*800;
+  posiciones[i+1]=(Math.random()-0.5)*800;
+  posiciones[i+2]=(Math.random()-0.5)*800;
+}
+
+estrellasGeo.setAttribute('position', new THREE.BufferAttribute(posiciones,3));
+
+const estrellas = new THREE.Points(
+  estrellasGeo,
+  new THREE.PointsMaterial({color:0xffffff,size:1})
+);
+
+scene.add(estrellas);
+
+
+const obs3 = new CANNON.Body({ 
+mass: 1,
+position:new CANNON.Vec3(0,0, 0),
+shape: new CANNON.Sphere(2.5)
+});
+
+obs3.position.copy(mesh07.position);
+world.addBody(obs3);
+
+const obs4 = new CANNON.Body({ 
+mass: 1,
+position:new CANNON.Vec3(0, 0, 0),
+shape: new CANNON.Sphere(2.5)
+});
+
+obs4.position.copy(mesh08.position);
+world.addBody(obs4);
+
+
+//Llamado de los elementos del juego
+
+
+  const elemento_salu = document.getElementById('salud');
+  const elemento_puntos = document.getElementById('puntos');
+  const REINICIAR = document.getElementById('botonReiniciar'); 
+  const gameover = document.getElementById('avisoo'); 
+
+  //Primero programar las variables
+
+  var puntos = 0;
+  var vida = 100;
+
+//Cuerpos de los obstaculones en el mundo
+
+var obstacles1 = [mesh01, mesh02, mesh03, mesh04,mesh05,mesh06, mesh09, mesh10];
+
+
+obstacles1.forEach(obstacle =>{
+  const obstacleShape = new CANNON.Box (new CANNON.Vec3(
+    obstacle.geometry.parameters.width /2,
+    obstacle.geometry.parameters.height /2,
+    obstacle.geometry.parameters.depth /2
+  ));
+
+
+const obstacleBody = new CANNON.Body({ mass:0});
+obstacleBody.addShape(obstacleShape);
+obstacleBody.position.copy(obstacle.position);
+
+const quat = new CANNON.Quaternion();
+quat.setFromEuler(obstacle.rotation.x,obstacle.rotation.y,obstacle.rotation.z, "XYZ");
+
+obstacleBody.quaternion.set(quat.z,quat.y,quat.z,quat.w);
+
+world.addBody(obstacleBody);
+});
+
+
+  //cuerpo de los Haters o enemys
+
+const objp = [mesh07];
+
+const datap = [];
+
+objp.forEach(obstacle1 =>{
+  const obstacleShape1 = (new CANNON.Sphere(
+  obstacle1.geometry.parameters.radius || 1)
+  )
+
+
+const obstacleBody1 = new CANNON.Body({ mass:0, type: CANNON.Body.KINEMATIC});
+obstacleBody1.addShape(obstacleShape1);
+obstacleBody1.position.copy(obstacle1.position);
+obstacleBody1.collisionResponse = false;
+
+datap.push({
+        mesh: obstacle1,
+        body: obstacleBody1
+    });
+    
+world.addBody(obstacleBody1);
+});
+
+  //Posisciones de los puntos provicionalmente
+  
+  const positions = [
+    new THREE.Vector3(0, 3, 40),
+    new THREE.Vector3(15, 3, 80),
+    new THREE.Vector3(-15, 3, 120),
+    new THREE.Vector3(0, 3, 160),
+    new THREE.Vector3(-15, 3, 200),
+    new THREE.Vector3(15, 3, 240),
+    new THREE.Vector3(0, 3, 280),
+    new THREE.Vector3(15, 3, 320),
+    new THREE.Vector3(-15, 3, 360),
+    new THREE.Vector3(0, 3, 400),
+    new THREE.Vector3(-15, 3, 440),
+    new THREE.Vector3(15, 3, 480),
+    new THREE.Vector3(0, 3, 520),
+    new THREE.Vector3(15, 3, 560),
+    new THREE.Vector3(-15, 3, 600),
+    new THREE.Vector3(0, 3, 640),
+    new THREE.Vector3(-15, 3, 680),
+    new THREE.Vector3(15, 3, 720)
+];
+
+// Pocisiones de los Haters o los enemyes
+  const positions1 = [
+    new THREE.Vector3(10, 3, 40),
+    new THREE.Vector3(0, 3, 40),
+    new THREE.Vector3(-9, 3, -40),
+    new THREE.Vector3(-20, 3, 0),
+    new THREE.Vector3(-18, 3, -40),
+    new THREE.Vector3(6, 3, 56),
+    new THREE.Vector3(12, 3, -80),
+    new THREE.Vector3(-3, 3, -54),
+    new THREE.Vector3(-20, 3, -58),
+    new THREE.Vector3(14, 3, 16),
+    new THREE.Vector3(9, 3, 67),
+    new THREE.Vector3(-4, 3, -36),
+    new THREE.Vector3(15, 3, 29),
+    new THREE.Vector3(7, 3, 72),
+    new THREE.Vector3(-5, 3, -67),
+    new THREE.Vector3(4, 3, 65),
+    new THREE.Vector3(-15, 3, 72),
+    new THREE.Vector3(-12, 3, 40)
+];
+
+  //Variable IMPORTANTES PARA EL JUEGO
+
+var reloj = new THREE.Clock();
+var vel  = 3;
+var amp = 5;
+var vel2  = .1;
+var amp2= .5;
+var vel3  = 30;
+var amp3 = 50;
+var movimiento= 10;
+var acleleracion= 1;
+var desascelaracion=1;
+let currentSpeed=0;
+var movmentspeed=2;
+var rotar=2;
+var rot2= 0;
+var keys= {};
+
+window.addEventListener('keydown', (event) => {
+  keys[event.code] = true;
+});
+
+window.addEventListener('keyup', (event) => {
+  keys[event.code] = false;
+});
+
+//Nueva constante para los carriles perrilo
+
+
+const carrilesX = [-20, 0, 20];
+
+const objp1 = [mesh08];
+
+const datap1 = [];
+
+objp1.forEach(obstacle2 =>{
+  const obstacleShape2 = (new CANNON.Sphere(
+  obstacle2.geometry.parameters.radius || 1)
+  )
+
+
+const obstacleBody2 = new CANNON.Body({ mass:0, type: CANNON.Body.KINEMATIC});
+obstacleBody2.addShape(obstacleShape2);
+obstacleBody2.position.copy(obstacle2.position);
+obstacleBody2.collisionResponse = false;
+
+datap1.push({
+        mesh: obstacle2,
+        body: obstacleBody2
+    });
+    
+world.addBody(obstacleBody2);
+});
+
+
+//Animaciones del juego o cosillas asi
+
+function aplicaFisicaAGrafico() {
+  currentSpeed = movmentspeed;
+
+obs3.position.copy(mesh07.position); 
+obs3.quaternion.copy(mesh07.quaternion); 
+
+
+obs4.position.copy(mesh08.position); 
+obs4.quaternion.copy(mesh08.quaternion); 
+estrellas.position.z= ((reloj.getElapsedTime()*vel*amp*2)+9);
+
+ if (puntos >= 3){
+  estrellas.position.z= ((reloj.getElapsedTime()*vel*amp*2.2)+9);
+ }
+
+ if (puntos >= 6){
+  estrellas.position.z= ((reloj.getElapsedTime()*vel*amp*2.4)+9);
+ }
+
+ if (puntos >= 9){
+  estrellas.position.z= ((reloj.getElapsedTime()*vel*amp*2.6)+9);
+ }
+
+
+}
+
+//Controles del juego 
+
+
+// Creacion de variables del Salto perroni
+  let saltillo = false;
+  const vsal = 20;
+
+  nave.addEventListener('collide', (event) =>{
+
+    const contact = event.contact;
+
+    if (!contact || !contact.ni) return;
+    let normal= contact.ni;
+
+    if (contact.bi.id === nave.id){
+      normal= normal.scale(-1);
+    }
+
+    if (normal.y > 0.5){
+      saltillo=true; 
+
+    }
+  });
+
+
+  //Programacion de controles
+
+ function tecladones (){
+  
+
+
+   var forward = new CANNON.Vec3(0, 0, -1);
+  ob2.getWorldDirection(forward);
+  forward.normalize();
+  ob2.position.copy(nave.position);
+  ob2.quaternion.copy(nave.quaternion);
+
+  ob2.quaternion.x=nave.quaternion.x;
+  ob2.quaternion.z=nave.quaternion.z;
+
+ 
+  if (keys['Space'] && saltillo) {
+    nave .velocity.y= vsal;
+    saltillo= false;
+    //rotation.x=((reloj.getElapsedTime()*vel3*2*amp3*2)*.5)+.5;
+  }
+
+  //Funcion para que la navecita se mueva sola y velocidad progresiva
+  let speedMultiplier = 10;
+  let lateralSpeed = 0;
+
+if (puntos >= 3) speedMultiplier = 15;
+if (puntos >= 6) speedMultiplier = 20;
+if (puntos >= 9) speedMultiplier = 25;
+
+if (keys['KeyA']) {
+   lateralSpeed= 15;
+    rot2=(reloj.getElapsedTime()*vel)*amp;
+    ob1.rotation.z = ((reloj.getElapsedTime()*vel*amp)+.5);
+    ob1.scale.z = ((reloj.getElapsedTime()*vel2*amp2)+.5);
+    ob1.scale.z =.8;
+   if (puntos >= 3){
+    lateralSpeed = 20;
+   }
+   if (puntos >= 6){
+    lateralSpeed = 25;
+   }
+ 
+} else if (keys['KeyD']) {
+   lateralSpeed =- 15;
+   currentSpeed = Math.max(currentSpeed - desascelaracion, -movmentspeed);
+    rot2 = (reloj.getElapsedTime()*vel)*-amp;
+    ob1.rotation.z= ((reloj.getElapsedTime()*vel*amp)-.5);
+    ob1.scale.z = ((reloj.getElapsedTime()*vel2*amp2)-.5);
+    ob1.scale.z =.8;
+   if (puntos >= 3){
+    lateralSpeed = -20;
+   }
+   if (puntos >= 6){
+    lateralSpeed = -25;
+   }
+  
+  }
+  else {
+    rot2=0;
+    ob1.rotation.z=0;
+    ob1.scale.z=1;
+  
+} 
+
+nave.velocity.set(
+  lateralSpeed,
+  nave.velocity.y,
+  +speedMultiplier )
+ }
+
+//Movimiento de puntos en carriles perrones tipo subway surfers xd
+
+const radioDeteccion = 10;
+function updatePuntos() {
+  datap.forEach(obj1 => {
+    const distancia = obj1.mesh.position.distanceTo(
+      ob2.position);
+    if (distancia < radioDeteccion) {
+      console.log("punto");
+      puntos++;
+      //puntos=puntos+10;
+      moverObjeto(obj1);
+
+  datap1.forEach(enemigo => {
+    moverObjeto1(enemigo);
+  });
+    }
+    // sincronizar body con mesh (por si usas debug o futuras colisiones)
+    obj1.body.position.copy(obj1.mesh.position);
+  });
+}
+
+function moverObjeto(obj1) {
+  let posX;
+  let distancia;
+  let tempPos; 
+
+  const forward = new THREE.Vector3();
+  ob2.getWorldDirection(forward);
+
+  
+
+  do {
+    const randomIndex = Math.floor(Math.random() * carrilesX.length);
+    posX = carrilesX[randomIndex];
+
+    tempPos = ob2.position.clone().add(
+      forward.clone().multiplyScalar(100)
+    );
+
+    tempPos.x = posX;
+    tempPos.y = 3;
+
+    distancia = tempPos.distanceTo(ob2.position);
+
+    
+  } while (distancia < 50);
+
+  obj1.mesh.position.copy(tempPos);
+  obj1.body.position.copy(tempPos);
+}
+
+
+//Movment de haters perrones
+
+
+const radioDeteccion1= 10;
+function RestarLife() {
+  datap1.forEach(obj2 => {
+    const distancia1 = obj2.mesh.position.distanceTo(
+      ob2.position);
+    if (distancia1 < radioDeteccion1) {
+      console.log("punto");
+      vida=vida-10;
+      //puntos=puntos+10;
+      moverObjeto1(obj2);
+
+    datap.forEach(punticos => {
+    moverObjeto(punticos);})
+      
+    }
+    // sincronizar body con mesh (por si usas debug o futuras colisiones)
+    obj2.body.position.copy(obj2.mesh.position);
+  });
+}
+
+function moverObjeto1(obj2) {
+
+  const forward = new THREE.Vector3();
+  ob2.getWorldDirection(forward);
+
+  const posX = carrilesX[Math.floor(Math.random() * carrilesX.length)];
+
+  const tempPos = ob2.position.clone()
+    .add(forward.multiplyScalar(100));
+
+  tempPos.x = posX;
+  tempPos.y = 3;
+
+  obj2.mesh.position.copy(tempPos);
+  obj2.body.position.copy(tempPos);
+}
+
+//render 
+
+
+requestAnimationFrame(render);
+function render(){
+  
+    if(puntos == 10){
+  REINICIAR.style.opacity = 1;
+  gameover.textContent = '¡Ganaste perrillo!';
+} 
+
+if(vida == 0){
+  REINICIAR.style.opacity = 1;
+  gameover.textContent = '¡Perdiste perrillo!';
+} 
+
+  cannonDebug.update(); ///////////se actualiza la visualización del debugger
+  world.fixedStep(); 
+  // Actualiza el mundo fisico a 1/60 60fotogramas por segundo predeterminado
+  world.step(1 / 24); 
+  // Actualizar el mundo físico con otra configuración de fotogramas
+  aplicaFisicaAGrafico();
+  tecladones();
+  updatePuntos(); ////// elementos nuevos
+          elemento_puntos.textContent = puntos; 
+          elemento_salu.textContent = vida; 
+          camera.lookAt (ob2.position);
+  RestarLife();
+
+renderer.render(scene, camera);
+requestAnimationFrame(render);
+}
+
+</script>
+</div>     
+</body>
+</html>

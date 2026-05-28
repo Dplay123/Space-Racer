@@ -1,0 +1,1259 @@
+ <!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="utf-8">
+        <title>Movment Nave</title>
+        <style>
+          body {
+              margin: 0;
+              overflow: hidden;
+          }
+
+          @font-face {
+            font-family: 'font';
+            src: url('./fonts/Play Pretend.otf');
+          }
+          #interfaz {
+            font-family: 'font';
+            background-color: black;
+            color: white;
+            font-size: 26px;
+            position: fixed; 
+            top: 0; 
+            left: 0;
+            z-index: 1; 
+            width: 100%;
+            height: 200px;
+            background-color: transparent; 
+            margin-top: 1%;
+            margin-left: 1%;
+          /* otros estilos para la barra de navegación */ 
+        }
+        #avisoo{
+          font-size: 100px;
+          margin: auto;
+          padding: auto;
+          color: red;
+        }
+
+        .block1 {
+  width: 100%;
+  height: 50%;
+  margin:1px;
+  padding:0;
+  overflow-x: hidden;
+}
+
+.block2 {
+  width: 100%;
+  height: 200px;
+  margin:1px;
+  padding:0;
+  overflow: scroll;
+  overflow-x: hidden;
+}
+#overlay {
+	position: absolute;
+	font-size: 16px;
+	z-index: 2;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-direction: column;
+	background: rgba(0,0,0,0.7);
+}
+#overlay button {
+		background: transparent;
+		border: 0;
+		border: 1px solid rgb(255, 255, 255);
+		border-radius: 4px;
+		color: #ffffff;
+		padding: 12px 18px;
+		text-transform: uppercase;
+		cursor: pointer;}
+
+        
+        </style>
+    </head>
+    <body>
+       <canvas id="mycanvas"></canvas> 
+      <div id="interfaz">
+      <div id="miDivdis">Puntos: <span id="puntos" style="opacity: 1;" str></span></div>
+      <div id="miDivalt">Salud: <span id="salud" style="opacity: 1;"></span></div>
+          
+      <div id="miDiv" style=" width: 50%; margin: auto;"> 
+          
+          <span id="avisoo"></span> <br>
+          
+          <button id="botonReiniciar" 
+          style="width: 400px; height: 60px; 
+          background-color: black; 
+          color: white;
+          border: none;
+          font-size: 30px;
+          font-family: 'font';
+          margin: auto;
+          opacity: 0;
+          " onclick="location.reload()">REINICIAR
+          </button>
+        </div>
+
+        <div>
+          
+          <div id="overlay">
+            <button id="startButton" >Play</button>
+          </div>
+        
+        <script type="importmap">
+          {
+            "imports": {
+            "three": "./js/three.module.js",
+            "three/OrbitControls": "./js/OrbitControls.js",
+            "cannon-es": "https://cdn.jsdelivr.net/npm/cannon-es@latest/dist/cannon-es.js",
+            "cannon-debugger": "./js/cannon-es-debugger.js"
+            }
+          }
+      </script>
+<script type="module">
+      
+  import * as THREE from './js/three.module.js';
+  import * as CANNON from 'https://cdn.jsdelivr.net/npm/cannon-es@latest/dist/cannon-es.js';
+  import CannonDebugger from './js/cannon-es-debugger.js'
+  import { OrbitControls } from './js/OrbitControls.js';
+  import{RoundedBoxGeometry} from './js/RoundedBoxGeometry.js';
+  import Obj1 from './obj/Nave.js';
+  import Obj2 from './obj/Dec1.js';
+  import Obj3 from './obj/Dec2.js';
+  import Obj4 from './obj/Dec3.js';
+  import Obj5 from './obj/Dec4.js';
+  import Obj6 from './obj/Dec5.js';
+  import Obj7 from './obj/Dec6.js';
+  import Obj8 from './obj/MegaEnemy.js';
+  import Obj9 from './obj/Life.js';
+  import Obj10 from './obj/Lento.js';
+  import Obj11 from './obj/Enemy.js';
+  import Obj12 from './obj/Estrella.js';
+  
+
+  //render
+
+var renderer = new THREE.WebGLRenderer({canvas: document.getElementById('mycanvas'), antialias: true});
+//renderer.setClearColor(0xffcd85);
+renderer.setPixelRatio(window.devicePixelRatio);
+renderer.setSize(window.innerWidth, window.innerHeight);
+
+var scene =new THREE.Scene();
+var gridHelper = new THREE.GridHelper( 1000, 1000 );
+//scene.add( gridHelper );
+
+const startButton = document.getElementById( 'startButton' );
+			startButton.addEventListener( 'click', init );
+      
+              function init() {
+                const overlay = document.getElementById( 'overlay' );
+				overlay.remove();
+
+
+//Creacion del mundo y gravedad hermano
+
+var world = new CANNON.World();
+world.broadphase = new CANNON.SAPBroadphase(world);
+world.gravity.set(0, -9.82, 0); // Gravedad usando cannon
+world.defaultContactMaterial.friction=0;
+
+var groundMaterial = new CANNON.Material("groundMaterial");
+var wheelMaterial = new CANNON.Material("wheelMaterial");
+var wheelGroundMaterial = new CANNON.ContactMaterial(
+  wheelMaterial, groundMaterial, {
+    friction: 0.3,
+    restitution: 0,
+    contactEquationStiffness: 1000
+});
+
+world.addContactMaterial(wheelGroundMaterial);
+
+var cannonDebug = new CannonDebugger(scene, world); ///////// se genera un debugger que permite "ver" las aristas de las geometrias usadas en el cannon (un helper)
+
+const groundBody = new CANNON.Body({
+type: CANNON.Body.STATIC,
+shape: new CANNON.Plane(),
+});
+groundBody.quaternion.setFromEuler(-Math.PI / 2, 0, 0);/// elplano aparece vertical, asíq ue hay que girarlo para que quede acostado
+groundBody.position.y=0;
+world.addBody(groundBody);//////////////////////////////////////// configuración del mundo cannon
+
+
+//camara y orbit controls
+var camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 0.1, 3000);
+camera.position.set(0,15,-80);
+
+var controls = new OrbitControls(camera, renderer.domElement); ////////////camara
+
+//luz
+
+var light = new THREE.PointLight(0x1BB3FF, 2.0, 200);
+light.castShadow = true;
+light.shadow.bias = 0.0001;
+light.shadow.mapSize.width = 2048 * 2;
+light.shadow.mapSize.height = 2048 * 2;
+light.position.set(60, 60, 10);
+light.position.set(0, 10, -10);
+
+var light2 = new THREE.AmbientLight(0xffffff, .3);
+
+
+scene.add(light2)
+
+
+//Figurones para el juego perron hemano
+
+//carriles
+
+var p1 = new THREE.BoxGeometry(20,10,20000);
+var m1 = new THREE.MeshLambertMaterial ({
+        color: 0xF54927, side: THREE.DoubleSide,transparent: true, opacity: 0
+    });
+var mesh01 = new THREE.Mesh(p1,m1);
+mesh01.position.set(0,-5,960)
+scene.add(mesh01);
+
+var p2 = new THREE.BoxGeometry(20,10,20000);
+var m2 = new THREE.MeshLambertMaterial ({
+        color: 0xFFFFFF, side: THREE.DoubleSide,transparent: true, opacity: 0
+    });
+var mesh02 = new THREE.Mesh(p2,m2);
+mesh02.position.set(-20,-5,960)
+scene.add(mesh02);
+
+var p3 = new THREE.BoxGeometry(20,10,20000);
+var m3 = new THREE.MeshLambertMaterial ({
+        color: 0xFFFFFF, side: THREE.DoubleSide,transparent: true, opacity: 0
+    });
+var mesh03 = new THREE.Mesh(p3,m3);
+mesh03.position.set(20,-5,960);
+scene.add(mesh03);
+
+var p4 = new THREE.BoxGeometry(10,60,20000);
+var m4 = new THREE.MeshLambertMaterial ({
+        color: 0xFFFFFF, side: THREE.DoubleSide,transparent: true, opacity: 0
+    });
+var mesh04 = new THREE.Mesh(p4,m4);
+mesh04.position.set(35,5,960);
+scene.add(mesh04);
+
+var p9 = new THREE.BoxGeometry(10,60,20000);
+var m9 = new THREE.MeshLambertMaterial ({
+        color: 0xFFFFFF, side: THREE.DoubleSide,transparent: true, opacity: 0
+    });
+var mesh09 = new THREE.Mesh(p9,m9);
+mesh09.position.set(-35,5,960);
+scene.add(mesh09);
+
+var p10 = new THREE.BoxGeometry(10,60,80);
+var m10 = new THREE.MeshLambertMaterial ({
+        color: 0xFFFFFF, side: THREE.DoubleSide,transparent: true, opacity: 0
+    });
+var mesh10 = new THREE.Mesh(p10,m10);
+mesh10.position.set(0,5,-40);
+mesh10.rotation.set(0,1.57,0)
+scene.add(mesh10);
+
+//obstaculones
+var ob1 = new THREE.SphereGeometry(2.5,50);
+var m5 = new THREE.MeshLambertMaterial ({
+        color: 0xF8FC0D, side: THREE.DoubleSide
+    });
+var mesh05 = new THREE.Mesh(ob1,m5);
+mesh05.position.set(11,2.5,32);
+mesh05.rotation.set(0,1.57,0);
+//scene.add(mesh05);
+
+var ob2 = new THREE.SphereGeometry(2.5,50);
+var m6 = new THREE.MeshLambertMaterial ({
+        color: 0xC00DFC, side: THREE.DoubleSide
+    });
+var mesh06 = new THREE.Mesh(ob2,m6);
+mesh06.position.set(-22,2.5,40);
+mesh06.rotation.set(0,1.57,0);
+//scene.add(mesh06);
+
+var ob11 = new THREE.SphereGeometry(2.5,50);
+var m11 = new THREE.MeshLambertMaterial ({
+        color: 0x017369, side: THREE.DoubleSide
+    });
+var mesh11 = new THREE.Mesh(ob11,m11);
+mesh11.position.set(-22,2.5,40.5);
+mesh11.rotation.set(0,1.57,0);
+//scene.add(mesh11);
+
+
+var ob3 = new THREE.SphereGeometry(2.5,50);
+var m7 = new THREE.MeshLambertMaterial ({
+        color: 0x0DFC11, side: THREE.DoubleSide
+    });
+var mesh07 = new THREE.Mesh(ob3,m7);
+mesh07.position.set(0,2.5,30);
+//scene.add(mesh07);
+
+var ob4 = new THREE.SphereGeometry(2.5,50);
+var m8 = new THREE.MeshLambertMaterial ({
+        color: 0xFC0D0D, side: THREE.DoubleSide
+    });
+var mesh08 = new THREE.Mesh(ob4,m8);
+mesh08.position.set(0,2.5,40);
+
+//scene.add(mesh08);
+
+
+//nave perrona
+
+var osb1= Obj1({x: 0, y: 0, z: 0});
+//scene.add(osb1);
+osb1.position.set(0, 0, 0);
+osb1.scale.set(0.5,0.5,0.5);
+
+var osb2 = new THREE.Group();
+osb2.add(osb1,camera);
+scene.add(osb2);
+osb2.position.set(0, 25, 0);
+osb1.add(light);
+
+//Decoraciones importadas las weas folotantes
+
+var dec1 = Obj2({x: 0, y: 0, z: 0});
+dec1.position.set(0, 0, 0);
+dec1.scale.set(2.5,2.5,2.5);
+
+var dec2 = Obj3({x: 0, y: 0, z: 0});
+dec2.position.set(0, 0, 0);
+dec2.scale.set(5,5,5);
+
+var dec3 = Obj4({x: 0, y: 0, z: 0});
+dec3.position.set(0, 0, 0);
+dec3.scale.set(5,5,5);
+
+var dec4 = Obj5({x: 0, y: 0, z: 0});
+dec4.position.set(0, 0, 0);
+dec4.scale.set(5,5,5);
+
+var dec5 = Obj6({x: 0, y: 0, z: 0});
+dec5.position.set(0, 0, 0);
+dec5.scale.set(1,1,1);
+
+var dec6 = Obj7({x: 0, y: 0, z: 0});
+dec6.position.set(0, 0, 0);
+dec6.scale.set(2.5,2.5,2.5);
+
+
+//Figuras de los items perronis
+
+var MegaEnemy = Obj8({x: 0, y: 0, z: 0});
+MegaEnemy .position.set(0, 0, 0);
+MegaEnemy .scale.set(.08,.08,.08);
+scene.add(MegaEnemy);
+
+var Life= Obj9({x: 0, y: 0, z: 0});
+Life.position.set(0, 0, 0);
+Life.scale.set(1,1,1);
+scene.add(Life);
+
+var Lento= Obj10({x: 0, y: 20, z: 0});
+Lento.position.set(0, 10, 0);
+Lento.scale.set(.5,.5,.5);
+Lento.rotation.set(0,0,3.14);
+scene.add(Lento);
+
+var Enemy= Obj11({x: 0, y: 100, z: -100});
+Enemy.position.set(0, -100, 0);
+Enemy.scale.set(1,1,1);
+scene.add(Enemy);
+
+var Point= Obj12({x: 0, y: 100, z: -100});
+Point.position.set(0, -100, 0);
+Point.scale.set(1,1,1);
+scene.add(Point);
+
+ //Variable IMPORTANTES PARA EL JUEGO
+
+var reloj = new THREE.Clock();
+var vel  = 3;
+var amp = 5;
+var vel2  = .1;
+var amp2= .5;
+var vel3  = 30;
+var amp3 = 50;
+var movimiento= 10;
+var acleleracion= 1;
+var desascelaracion=1;
+let currentSpeed=0;
+var movmentspeed=2;
+let speedMultiplier = 10;
+let lateralSpeed = 0;
+var rotar=2;
+var rot2= 0;
+let slowFactor = 1;
+let slowActivo = false;
+let slowTimer = 0;
+
+var keys= {};
+
+
+window.addEventListener('keydown', (event) => {
+  keys[event.code] = true;
+});
+
+window.addEventListener('keyup', (event) => {
+  keys[event.code] = false;
+});
+
+//Llamado de los elementos del juego
+
+
+  const elemento_salu = document.getElementById('salud');
+  const elemento_puntos = document.getElementById('puntos');
+  const REINICIAR = document.getElementById('botonReiniciar'); 
+  const gameover = document.getElementById('avisoo'); 
+
+  //Primero programar las variables
+
+  var puntos = 0;
+  var vida = 100;
+
+//Decoracion perrona para el fondo 
+
+//estrellitas donde estan
+const estrellasGeo = new THREE.BufferGeometry();
+const estrellasCount = 20000;
+const posiciones = new Float32Array(estrellasCount*3);
+
+for(let i=0;i<estrellasCount*3;i+=3){
+  posiciones[i]=(Math.random()-0.5)*8000;
+  posiciones[i+1]=(Math.random()-0.5)*8000;
+  posiciones[i+2]=(Math.random()-0.5)*8000;
+}
+
+estrellasGeo.setAttribute('position', new THREE.BufferAttribute(posiciones,3));
+
+const estrellas = new THREE.Points(
+  estrellasGeo,
+  new THREE.PointsMaterial({color:0xffffff,size:1})
+);
+
+scene.add(estrellas);
+
+//Bodys para el juego, obstculones, carriles, haters y de mas weas perronas osi osi
+
+const nave = new CANNON.Body({ 
+mass: 1,
+position:new CANNON.Vec3(0,0,0),
+shape: new CANNON.Box(new CANNON.Vec3(4,2.5,4))
+});
+nave.position.copy(osb2.position);
+world.addBody(nave); 
+
+const obs3 = new CANNON.Body({ 
+mass: 1,
+position:new CANNON.Vec3(0,0, 0),
+shape: new CANNON.Sphere(2.5)
+});
+
+obs3.position.copy(mesh07.position);
+world.addBody(obs3);
+
+const obs4 = new CANNON.Body({ 
+mass: 1,
+position:new CANNON.Vec3(0, 0, 0),
+shape: new CANNON.Sphere(2.5)
+});
+
+obs4.position.copy(mesh08.position);
+world.addBody(obs4);
+
+
+//Controles del juego 
+
+  //Programacion de controles
+
+ function tecladones (){
+  
+
+  nave.angularVelocity.set(0,0,0);
+  nave.quaternion.set(0,0,0,1);
+
+  var forward = new CANNON.Vec3(0, 0, -1);
+  osb2.getWorldDirection(forward);
+  forward.normalize();
+  osb2.position.copy(nave.position);
+  osb2.quaternion.copy(nave.quaternion);
+
+  osb2.quaternion.x=nave.quaternion.x;
+  osb2.quaternion.z=nave.quaternion.z;
+
+
+  //Funcion para que la navecita se mueva sola y velocidad progresiva
+   speedMultiplier = 10;
+   lateralSpeed = 0;
+
+
+if (keys['KeyA']) {
+   lateralSpeed= 15;
+    rot2=(reloj.getElapsedTime()*vel)*amp;
+    osb1.rotation.z = ((reloj.getElapsedTime()*vel*amp)+.5);
+    osb1.scale.z = ((reloj.getElapsedTime()*vel2*amp2)+.5);
+    osb1.scale.z =.8;
+   if (puntos >= 3){
+    lateralSpeed = 20;
+   }
+   if (puntos >= 6){
+    lateralSpeed = 25;
+   }
+ 
+} else if (keys['KeyD']) {
+   lateralSpeed =- 15;
+    rot2 = (reloj.getElapsedTime()*vel)*-amp;
+    osb1.rotation.z= ((reloj.getElapsedTime()*vel*amp)-.5);
+    osb1.scale.z = ((reloj.getElapsedTime()*vel2*amp2)-.5);
+    osb1.scale.z =.8;
+   if (puntos >= 3){
+    lateralSpeed = -20;
+   }
+   if (puntos >= 6){
+    lateralSpeed = -25;
+   }
+  
+  }
+  else {
+    rot2=0;
+    osb1.rotation.z=0;
+    osb1.scale.z=1;
+  
+} 
+
+nave.velocity.set(
+  lateralSpeed * slowFactor,
+  nave.velocity.y,
+  speedMultiplier * slowFactor
+)
+
+
+ if (slowActivo) {
+  slowTimer--;
+
+  if (slowTimer <= 0) {
+    slowActivo = false;
+    slowFactor = 1; 
+  }
+}
+ }
+
+ //Variable de carrilones en x
+
+ const carrilesX = [-20, 0, 20];
+
+//Cuerpos de los carrilones para anavzar: THE GAME
+
+var obstacles1 = [mesh01, mesh02, mesh03, mesh04, mesh09, mesh10];
+
+
+obstacles1.forEach(obstacle =>{
+  const obstacleShape = new CANNON.Box (new CANNON.Vec3(
+    obstacle.geometry.parameters.width /2,
+    obstacle.geometry.parameters.height /2,
+    obstacle.geometry.parameters.depth /2
+  ));
+
+
+const obstacleBody = new CANNON.Body({ mass:0});
+obstacleBody.addShape(obstacleShape);
+obstacleBody.position.copy(obstacle.position);
+
+const quat = new CANNON.Quaternion();
+quat.setFromEuler(obstacle.rotation.x,obstacle.rotation.y,obstacle.rotation.z, "XYZ");
+
+obstacleBody.quaternion.set(quat.x,quat.y,quat.z,quat.w);
+
+world.addBody(obstacleBody);
+});
+
+
+// Porgramacion de los haters y los itemsones
+
+//Items Buenones: Punticos, Retraso y curaciones
+
+const objp = [Point];
+const objp3 = [Life];
+const objp4 = [Lento];
+
+
+const datap = [];
+const datap3 = [];
+const datap4= [];
+
+//Recoleccion de Punticos
+
+objp.forEach(obstacle1 =>{
+  const obstacleShape1 = new CANNON.Sphere(2.5);
+
+
+const obstacleBody1 = new CANNON.Body({ mass:0, type: CANNON.Body.KINEMATIC});
+obstacleBody1.addShape(obstacleShape1);
+obstacleBody1.position.copy(obstacle1.position);
+obstacleBody1.collisionResponse = false;
+
+datap.push({
+        mesh: obstacle1,
+        body: obstacleBody1,
+        activo: true,
+        cooldown: 0
+    });
+    
+world.addBody(obstacleBody1);
+});
+
+
+//Recolocacion de Life
+objp3.forEach(obstacle4 =>{
+  const obstacleShape4 =new CANNON.Sphere(2.5);
+
+
+const obstacleBody4 = new CANNON.Body({ mass:0, type: CANNON.Body.KINEMATIC});
+obstacleBody4.addShape(obstacleShape4);
+obstacleBody4.position.copy(obstacle4.position);
+obstacleBody4.collisionResponse = false;
+
+datap3.push({
+        mesh: obstacle4,
+        body: obstacleBody4,
+        activo: true,
+        cooldown: 0
+    });
+    
+world.addBody(obstacleBody4);
+});
+
+// Recoleccion de Retraso
+objp4.forEach(obstacle5 =>{
+  const obstacleShape5 = new CANNON.Sphere(2.5);
+
+
+const obstacleBody5 = new CANNON.Body({ mass:0, type: CANNON.Body.KINEMATIC});
+obstacleBody5.addShape(obstacleShape5);
+obstacleBody5.position.copy(obstacle5.position);
+obstacleBody5.collisionResponse = false;
+
+datap4.push({
+        mesh: obstacle5,
+        body: obstacleBody5,
+        activo: true,
+        cooldown: 0
+    });
+    
+world.addBody(obstacleBody5);
+});
+
+
+//Items Malones: Fans de cuites y de claudia shein
+
+const objp1 = [Enemy];
+const objp2 = [MegaEnemy];
+
+const datap1 = [];
+const datap2 = [];
+
+
+// Fans de cuities (Enemigos principales)
+objp1.forEach(obstacle2 =>{
+  const obstacleShape2 = new CANNON.Sphere(2.5);
+
+
+const obstacleBody2 = new CANNON.Body({ mass:0, type: CANNON.Body.KINEMATIC});
+obstacleBody2.addShape(obstacleShape2);
+obstacleBody2.position.copy(obstacle2.position);
+obstacleBody2.collisionResponse = false;
+
+datap1.push({
+        mesh: obstacle2,
+        body: obstacleBody2,
+        activo: true,
+        cooldown: 0
+    });
+    
+world.addBody(obstacleBody2);
+});
+
+//Fans de claudia Shein (Mega Enemigos)
+objp2.forEach(obstacle3=>{
+  const obstacleShape3 = new CANNON.Sphere(2.5);
+
+
+const obstacleBody3 = new CANNON.Body({ mass:0, type: CANNON.Body.KINEMATIC});
+obstacleBody3.addShape(obstacleShape3);
+obstacleBody3.position.copy(obstacle3.position);
+obstacleBody3.collisionResponse = false;
+
+datap2.push({
+        mesh: obstacle3,
+        body: obstacleBody3,
+        activo: true,
+        cooldown: 0 
+    });
+    
+world.addBody(obstacleBody3);
+});
+
+
+
+//Movimiento de puntos en carriles perrones tipo subway surfers xd
+
+//Movimiento de punticos
+
+const radioDeteccion = 10;
+function updatePuntos() {
+  datap.forEach(obj1 => {
+    const distancia = obj1.mesh.position.distanceTo(
+      osb2.position);
+    if (obj1.activo && distancia < radioDeteccion) {
+      console.log("punto");
+      puntos++;
+      if (sound1.isPlaying) sound1.stop(); 
+      sound1.play();
+      obj1.activo = false;
+      obj1.cooldown = 60;
+      //puntos=puntos+10;
+      moverObjeto(obj1);
+
+    // sincronizar body con mesh (por si usas debug o futuras colisiones)
+    obj1.body.position.copy(obj1.mesh.position);
+  }
+})}
+
+function moverObjeto(obj1) {
+  let posX;
+  let distancia;
+  let tempPos; 
+
+  const forward = new THREE.Vector3();
+  osb2.getWorldDirection(forward); 
+  let intentos = 0;
+  const maxIntentos = 10; 
+
+  do {
+    const distanciaRandom = 100 + Math.random() * 80;
+    posX = obtenerCarrilLibre();
+    tempPos = osb2.position.clone().add(
+      forward.clone().multiplyScalar(distanciaRandom)
+    );
+
+    tempPos.x = posX;
+    tempPos.y = 3;
+    distancia = tempPos.distanceTo(osb2.position);
+    intentos++;
+    if (intentos > maxIntentos) break;
+  } while (distancia < 50||
+    CarrilZ(tempPos.x, tempPos.z));
+
+  obj1.mesh.position.copy(tempPos);
+  obj1.body.position.copy(tempPos);
+}
+
+
+//Moviemiento de los fans de cuites
+
+const radioDeteccion1= 10;
+function RestarLife() {
+  datap1.forEach(obj2 => {
+    const distancia1 = obj2.mesh.position.distanceTo(
+      osb2.position);
+    if (distancia1 < radioDeteccion1) {
+      console.log("punto");
+      vida=vida-10;
+      if (sound2.isPlaying) sound2.stop(); 
+      sound2.play();
+      //puntos=puntos+10;
+      moverObjeto1(obj2);
+   
+    }
+    // sincronizar body con mesh (por si usas debug o futuras colisiones)
+    obj2.body.position.copy(obj2.mesh.position);
+  });
+}
+
+function moverObjeto1(obj2) {
+
+  const forward = new THREE.Vector3();
+  osb2.getWorldDirection(forward);
+
+  const posX = obtenerCarrilLibre();
+
+  const tempPos = osb2.position.clone()
+    .add(forward.multiplyScalar(100));
+
+  tempPos.x = posX;
+  tempPos.y = 3;
+
+  obj2.mesh.position.copy(tempPos);
+  obj2.body.position.copy(tempPos);
+}
+
+//Movimiento de fans de clauida Shein
+
+const radioDeteccion2= 10;
+function RestarMegaLife() {
+  datap2.forEach(obj3 => {
+    const distancia2 = obj3.mesh.position.distanceTo(
+      osb2.position);
+    if (distancia2 < radioDeteccion2) {
+      console.log("Mega life");
+      if (sound5.isPlaying) sound5.stop(); 
+      sound5.play();
+      vida=vida-20;
+      //puntos=puntos+10;
+      moverObjeto2(obj3);
+
+      
+    }
+    // sincronizar body con mesh (por si usas debug o futuras colisiones)
+    obj3.body.position.copy(obj3.mesh.position);
+  });
+}
+
+
+function moverObjeto2(obj3) {
+  const forward = new THREE.Vector3();
+  osb2.getWorldDirection(forward);
+  const posX1 = obtenerCarrilLibre();
+  const tempPos1 = osb2.position.clone()
+    .add(forward.multiplyScalar(100));
+  tempPos1.x = posX1;
+  tempPos1.y = 3;
+  obj3.mesh.position.copy(tempPos1);
+  obj3.body.position.copy(tempPos1);
+}
+
+//Movimiento de la Life men
+
+const radioDeteccion3 = 10;
+function recuperaLIFE() {
+  datap3.forEach(obj4 => {
+    const distancia3 = obj4.mesh.position.distanceTo(
+      osb2.position);
+    if (distancia3 < radioDeteccion3) {
+      console.log("punto");
+      if (sound3.isPlaying) sound3.stop(); 
+      sound3.play();
+      vida=vida+30;
+      //puntos=puntos+10;
+      moverObjeto3(obj4);
+
+
+    // sincronizar body con mesh (por si usas debug o futuras colisiones)
+    obj4.body.position.copy(obj4.mesh.position);
+  
+}})};
+
+function moverObjeto3(obj4) {
+  let posX2;
+  let distancia3;
+  let tempPos3; 
+  const forward = new THREE.Vector3();
+  osb2.getWorldDirection(forward);
+  let intentos = 0;
+  const maxIntentos = 10
+  do {
+    const distanciaRandom = 80 + Math.random() * 60;
+    posX2 =obtenerCarrilLibre();
+    tempPos3 = osb2.position.clone().add(
+      forward.clone().multiplyScalar(distanciaRandom)
+    );
+    tempPos3.x = posX2;
+    tempPos3.y = 3;
+    distancia3 = tempPos3.distanceTo(osb2.position);
+    intentos++;
+
+   if (intentos > maxIntentos) break; 
+  } while (distancia3 < 50||
+    CarrilZ(tempPos3.x, tempPos3.z));
+
+  obj4.mesh.position.copy(tempPos3);
+  obj4.body.position.copy(tempPos3);
+}
+
+
+//Movimiento DOWN
+
+const radioDeteccion4 = 10;
+function realentar() {
+  datap4.forEach(obj5 => {
+    const distancia4 = obj5.mesh.position.distanceTo(
+      osb2.position);
+    if (distancia4 < radioDeteccion4) {
+  console.log("power slow");
+  if (sound4.isPlaying) sound4.stop(); 
+      sound4.play();
+  slowActivo = true;
+slowTimer = 120;
+slowFactor = 0.5; 
+  moverObjeto4(obj5);
+
+
+ 
+    // sincronizar body con mesh (por si usas debug o futuras colisiones)
+    obj5.body.position.copy(obj5.mesh.position);
+}})};
+
+
+function moverObjeto4(obj5) {
+  let posX3;
+  let distancia4;
+  let tempPos4; 
+  const forward = new THREE.Vector3();
+  osb2.getWorldDirection(forward);
+  let intentos = 0;
+  const maxIntentos = 10
+  do {
+    const distanciaRandom = 80 + Math.random() * 60; 
+    posX3 =obtenerCarrilLibre();
+    tempPos4 = osb2.position.clone().add(
+      forward.clone().multiplyScalar(distanciaRandom)
+    );
+    tempPos4.x = posX3;
+    tempPos4.y = 3;
+    distancia4 = tempPos4.distanceTo(osb2.position);
+    intentos++;
+    if (intentos > maxIntentos) break;   
+  } while (CarrilZ(tempPos4.x, tempPos4.z));
+  obj5.mesh.position.copy(tempPos4);
+  obj5.body.position.copy(tempPos4);
+}
+
+// Seleccion de carriles para los items (Chingaderas al azar !Vamos¡)
+
+let megaActivo= false;
+let recuperaLife= false;
+let relento=false;
+
+function CarrilZ(posX, posZ) {
+  const todos = [...datap, ...datap1, ...datap2, ...datap3,...datap4];
+
+  return todos.some(obj => {
+    const dx = Math.abs(obj.mesh.position.x - posX);
+    const dz = Math.abs(obj.mesh.position.z - posZ);
+
+    return dx < 5 && dz < 40; 
+  });
+}
+
+function obtenerCarrilLibre() {
+
+  const CarrilLibre = [...datap,...datap1,...datap2,...datap3,...datap4];
+  const todos = [...datap,...datap1,...datap2,...datap3,...datap4];
+  const ocu =todos.map(obj => obj.mesh.position.x);
+  const liv = carrilesX.filter(x =>
+    !ocu.some(ox => Math.abs(ox - x) < 5)
+  );
+
+  if (liv.length === 0) {
+    return carrilesX[Math.floor(Math.random() * carrilesX.length)];
+  }
+
+  return liv[Math.floor(Math.random() * liv.length)];
+}
+
+function posicionOcupada(posX, posZ) {
+  const todos = [...datap, ...datap1, ...datap2, ...datap3, ...datap4];
+
+  return todos.some(obj => {
+    const dx = obj.mesh.position.x - posX;
+    const dz = obj.mesh.position.z - posZ;
+
+    const distancia = Math.sqrt(dx * dx + dz * dz);
+
+    return distancia < 15;
+  });
+  do {
+  const distanciaRandom = 150 + Math.random() * 200;
+
+  tempPos = osb2.position.clone().add(
+    forward.clone().multiplyScalar(distanciaRandom)
+  );
+
+  tempPos.x = obtenerXLibre(); // o random total si quieres
+  tempPos.y = 3;
+
+  intentos++;
+
+} while (posicionOcupada(tempPos.x, tempPos.z));
+}
+
+//Spanw de los items (Spawnear Chingaderas al azar !Vamos¡)
+
+function spawnAutomatico(lista) {
+  lista.forEach(obj => {
+
+    if (!obj.activo) return;
+
+    const distancia = obj.mesh.position.distanceTo(osb2.position);
+
+    if (distancia > 200 || obj.mesh.position.z < osb2.position.z - 50) {
+      moverObjeto(obj);
+    }
+
+  });
+}
+
+// Colocacion de las decoraciones (Decoraciones perronas al azar !Vamos¡)
+
+const decoraciones = [dec1, dec2, dec3, dec4, dec5, dec6];
+const modelosDecoracion = [Obj2, Obj3, Obj4, Obj5, Obj6, Obj7];
+const decoraciones1 = [];
+function crearDecoracion() {
+  const Modelo = modelosDecoracion[
+    Math.floor(Math.random() * modelosDecoracion.length)];
+  const obj = Modelo({x:0,y:0,z:0});
+  // escala controlada (no acumulativa)
+  const s = 0.3 + Math.random() * 0.7;
+  obj.scale.set(s, s, s);
+  let x;
+  const margen = 15;
+  do {
+    x = (Math.random() - 0.5) * 2000;
+  } while (
+    Math.abs(x + 20) < margen ||
+    Math.abs(x - 0) < margen ||
+    Math.abs(x - 20) < margen);
+  const z = osb2.position.z + (Math.random() - 0.5) * 10000;
+  const y = osb2.position.y + (Math.random() - 0.5) * 800;
+  obj.position.set(x, y, z);
+  obj.rotation.y = Math.random() * Math.PI * 2;
+  scene.add(obj);
+  decoraciones1.push(obj);
+}
+
+function posicionarDecoraciones() {
+  decoraciones.forEach(obj => {
+    let x;
+    const margenCarril = 15
+    // Generar posición fuera de carriles
+    do {
+  x = (Math.random() - 0.5) * 800;
+} while (
+  Math.abs(x - (-20)) < margenCarril || 
+  Math.abs(x - 0) < margenCarril || 
+  Math.abs(x - 20) < margenCarril
+);
+    const z = Math.random() * 500;
+    const y = Math.random() * 50;
+    obj.position.set(x, y, z);
+    scene.add(obj);
+    obj.rotation.y = Math.random() * Math.PI * 2;
+    obj.scale.multiplyScalar(0.3 + Math.random() * 0.5);
+  });
+}
+
+posicionarDecoraciones();
+for (let i = 0; i < 1000; i++) {
+  crearDecoracion();
+}
+
+//Animaciones del juego o cosillas asi
+
+function aplicaFisicaAGrafico() {
+  currentSpeed = movmentspeed;
+obs3.position.copy(mesh07.position); 
+obs3.quaternion.copy(mesh07.quaternion); 
+obs4.position.copy(mesh08.position); 
+obs4.quaternion.copy(mesh08.quaternion); 
+ if (puntos >= 3){
+  estrellas.position.z= ((reloj.getElapsedTime()*vel*amp*2.2)+9);
+ }
+ if (puntos >= 6){
+  estrellas.position.z= ((reloj.getElapsedTime()*vel*amp*2.4)+9);
+ }
+ if (puntos >= 9){
+  estrellas.position.z= ((reloj.getElapsedTime()*vel*amp*2.6)+9);
+ }
+ if (puntos >= 12){
+  estrellas.position.z= ((reloj.getElapsedTime()*vel*amp*2.6)+9);
+ }
+  if (puntos >= 15){
+  estrellas.position.z= ((reloj.getElapsedTime()*vel*amp*2.6)+9);
+ }
+ Enemy.position.y= (Math.cos(reloj.getElapsedTime()*vel*amp*.5)-.5);
+ Point.position.y= (Math.cos(reloj.getElapsedTime()*vel*amp*.5)-.5);
+ Life.position.y= (Math.cos(reloj.getElapsedTime()*vel*amp*.5)-.5);
+ MegaEnemy.position.y= (Math.cos(reloj.getElapsedTime()*vel*amp*.5)-.5);
+ Lento.position.y= (Math.cos(reloj.getElapsedTime()*vel*amp*.5)-.5);
+
+}
+
+
+//sonidos
+
+  const listener = new THREE.AudioListener();
+  camera.add(listener);
+  // Musica de fondo
+      const Fondo = new THREE.Audio( listener );
+      const FondoLoader = new THREE.AudioLoader();
+      FondoLoader.load( './Sonidos/StarComando.wav', function( buffer ) {
+      Fondo.setBuffer( buffer );
+      Fondo.setLoop( true ); 
+      Fondo.setVolume( .5);
+      Fondo.play ();
+      })
+  //soinidos
+      const sound1 = new THREE.PositionalAudio( listener );
+      const audioLoader1 = new THREE.AudioLoader();
+      audioLoader1.load( './Sonidos/Point.mp3', function( buffer ) {
+      sound1.setBuffer( buffer );
+      sound1.setLoop( false ); 
+      sound1.setVolume( 2);
+      sound1.setRolloffFactor(0);})
+
+      const sound2 = new THREE.PositionalAudio( listener );
+      const audioLoader2 = new THREE.AudioLoader();
+      audioLoader2.load( './Sonidos/choque.WAV', function( buffer ) {
+      sound2.setBuffer( buffer );
+      sound2.setLoop( false ); 
+      sound2.setVolume( 2);
+      sound2.setRolloffFactor(0);})
+
+      const sound3 = new THREE.PositionalAudio( listener );
+      const audioLoader3 = new THREE.AudioLoader();
+      audioLoader3.load( './Sonidos/vida.WAV', function( buffer ) {
+      sound3.setBuffer( buffer );
+      sound3.setLoop( false ); 
+      sound3.setVolume( 2);
+      sound3.setRolloffFactor(0);})
+
+      const sound4 = new THREE.PositionalAudio( listener );
+      const audioLoader4 = new THREE.AudioLoader();
+      audioLoader4.load( './Sonidos/Slow.mp3', function( buffer ) {
+      sound4.setBuffer( buffer );
+      sound4.setLoop( false ); 
+      sound4.setVolume( 2);
+      sound4.setRolloffFactor(0);})
+
+      const sound5 = new THREE.PositionalAudio( listener );
+      const audioLoader5 = new THREE.AudioLoader();
+      audioLoader5.load( './Sonidos/Mega.mp3', function( buffer ) {
+      sound5.setBuffer( buffer );
+      sound5.setLoop( false ); 
+      sound5.setVolume( 2);
+      sound5.setRolloffFactor(0);})
+
+//render 
+
+requestAnimationFrame(render);
+function render(){
+  
+    if(puntos == 20 ){
+  REINICIAR.style.opacity = 1;
+  gameover.textContent = '¡Ganaste perrillo!';
+  puntos= 20;
+} 
+
+
+if(vida <= 0){
+  REINICIAR.style.opacity = 1;
+  gameover.textContent = '¡Perdiste perrillo!';
+  vida=0;
+} 
+
+spawnAutomatico(datap);
+spawnAutomatico(datap1);
+spawnAutomatico(datap2);
+spawnAutomatico(datap3);
+spawnAutomatico(datap4);
+  //cannonDebug.update(); ///////////se actualiza la visualización del debugger
+  world.fixedStep(); 
+  // Actualiza el mundo fisico a 1/60 60fotogramas por segundo predeterminado
+  world.step(1 / 24); 
+  // Actualizar el mundo físico con otra configuración de fotogramas
+  aplicaFisicaAGrafico();
+  tecladones();
+  updatePuntos(); ////// elementos nuevos
+          elemento_puntos.textContent = puntos; 
+          elemento_salu.textContent = vida; 
+          camera.lookAt (osb2.position);
+  RestarLife();
+  realentar();
+
+  [...datap, ...datap1, ...datap2, ...datap3, ...datap4].forEach(obj => {
+  if (!obj.activo) {
+    obj.cooldown--;
+    if (obj.cooldown <= 0) {
+      obj.activo = true;
+    }
+  }
+});
+if (puntos ==7 || vida <= 50) {
+  megaActivo = true;
+}
+if (megaActivo) {
+   datap2.forEach(obj => {
+    obj.mesh.visible = true;
+    obj.activo = true; 
+  });
+  RestarMegaLife();
+} else {
+  datap2.forEach(obj => {
+    obj.mesh.visible = false;
+    obj.activo = false; 
+    obj.body.position.set(0, -1000, 0);
+  });
+}
+
+if (vida <= 60) {
+  recuperaLife= true;
+}
+else{
+  recuperaLife= false;
+}
+
+if (recuperaLife) {
+  datap3.forEach(obj => {
+    obj.mesh.visible = true;
+    obj.activo = true;
+  });
+  recuperaLIFE();
+} else {
+  datap3.forEach(obj => {
+    obj.mesh.visible = false;
+    obj.activo = false; 
+    obj.body.position.set(0, -1000, 0);
+  });
+}
+
+if (puntos== 12 || vida <= 40) {
+  relento= true;
+}
+
+if (relento) {
+  datap4.forEach(obj => {
+    obj.mesh.visible = true;
+    obj.activo = true;
+  });
+  realentar();
+} else {
+  datap4.forEach(obj => {
+    obj.mesh.visible = false;
+    obj.activo = false;
+    obj.body.position.set(0, -1000, 0);
+  });
+}
+
+
+
+renderer.render(scene, camera);
+requestAnimationFrame(render);
+}
+}
+
+</script>
+</div>     
+</body>
+</html>

@@ -1,0 +1,226 @@
+<!DOCTYPE html> 
+
+<html lang="en"> 
+
+<head> 
+    <title>fium</title>
+</head>
+
+<body>
+    <canvas id="myCanvas">
+        <!--El elemento HTML canvas se puede utilizar para dibujar gráficos a través de 
+        secuencias de comandos (por lo general JavaScript ).-->
+    </canvas>
+
+
+    <!-- Aquí va todo el código de three.js -->
+    <!-- script type="importmap" importa las librerías necesarias para three.js-->
+    <script type="importmap"> 
+        {
+            "imports":{
+                "three": "./js/three.module.js",
+
+                "three/OrbitControls": "./js/OrbitControls.js" 
+            }
+        }
+    </script>
+
+    <script type="module"> 
+    
+
+    //🗃️🗃️ Mandar llamar a la librería
+    import * as THREE from 'three'; 
+    import {OrbitControls} from 'three/OrbitControls';
+    console.log(OrbitControls);
+
+
+    //🕹️🕹️ Renderer - Realiza una conexión entre el código y el canvas
+    var renderer = new THREE.WebGLRenderer({
+        canvas: document.getElementById('myCanvas'), antialias: true,
+    });
+    renderer.setPixelRatio(window.decivePixelRatio);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setClearColor(0x6599C2);
+
+
+    // 🎬 Creando nueva escena - Es el espacio donde se colocan los objetos
+    var scene = new THREE.Scene();
+
+
+    //🎥🎥 Agregar una cámara de perspectiva
+    var camera = new THREE.PerspectiveCamera(70,window.innerWidth / window.innerHeight,0.1,2000);
+    scene.add(camera);
+
+    
+    //Settings de la cámara
+    camera.position.set(80, 40, 0);
+
+
+  //luz ambiente
+    var light = new THREE.AmbientLight(0xFFFFFF, .2);
+    light.position.set(20, -30, 20); 
+    scene.add(light);
+
+    ///////////////////7
+    var l1 = new THREE.PointLight(0x02B025, 2, 100);
+    scene.add(l1);
+    l1.position.set(5, 0, 15);
+    scene.add(l1.target);
+    l1.position.set(5, -20, 20);
+
+    var l2 = new THREE.PointLight(0xFF0000, 2, 100);
+    scene.add(l2);
+    l2.position.set(-20, -25, -20);
+    scene.add(l2.target);
+    l2.position.set(-5, -20, 40);
+
+    var l3 = new THREE.PointLight(0xA102D9, 2, 100);
+    scene.add(l3);
+    l3.position.set(55, 0, 20);
+    scene.add(l3.target);
+    l3.position.set(55, 55, 40);
+
+    var l4 = new THREE.PointLight(0xF2EB0C, 2, 100);
+    scene.add(l4);
+    l4.position.set(-55, 0, -20);
+    scene.add(l4.target);
+    l4.position.set(45, 45, 40);
+
+    var l5 = new THREE.PointLight(0xEB9500, 2, 100);
+    scene.add(l5);
+    l5.position.set(0, 0, 20);
+    scene.add(l5.target);
+    l5.position.set(-45, 45, 40);
+
+    var l6 = new THREE.PointLight(0xEB00C0, 2, 100);
+    scene.add(l6);
+    l6.position.set(-55, 0, -20);
+    scene.add(l6.target);
+    l6.position.set(-55, 55, 20);
+
+
+    // Añadiendo los OrbitControls
+    var controls = new OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.05;
+
+
+    var gridHelper = new THREE.GridHelper(125, 125, 5,5);
+    //scene.add(gridHelper);
+
+    var gridHelper = new THREE.PolarGridHelper(20, 16, 20 ,64 );
+    //scene.add( gridHelper );
+
+    var gridHelper = new THREE.AxesHelper(500);
+    scene.add(gridHelper);
+
+
+    // Espacio para colocar los objetos
+
+        //Plano
+        var g1 = new  THREE.PlaneGeometry (300,300,10,10);
+        var m1 = new THREE.MeshBasicMaterial ({color: 0xFFDAA6, side: THREE.DoubleSide});
+        var mesh01 = new THREE.Mesh(g1,m1);
+        scene.add(mesh01);
+        mesh01.position.set(0,-5,0);
+        mesh01.rotation.x = Math.PI/2;
+
+        //nave
+        var domo1 = new THREE.SphereGeometry( 15, 32, 16, 0, Math.PI*2,0, Math.PI/2 );
+        var material01 = new THREE.MeshBasicMaterial( { color: 0x00D4FF, transparent:true, opacity:0.2 } );
+        var mesh1 = new THREE.Mesh( domo1, material01 );
+        scene.add( mesh1 );
+        mesh1.position.set(0, 19, 0); 
+
+        var domo2 = new THREE.SphereGeometry( 15, 32, 16, 0, Math.PI*2,0, Math.PI/2 );
+        var material02 = new THREE.MeshBasicMaterial( { color:0x111C38} );
+        var mesh2 = new THREE.Mesh( domo2, material02 );
+        scene.add( mesh2 );
+        mesh2.position.set(0, 19, 0);
+        mesh2.rotation.x=Math.PI;
+
+        var anillo = new THREE.CylinderGeometry(25, 1, 5, 32 );
+        var material03 = new THREE.MeshBasicMaterial( { color: 0x111C38} );
+        var mesh3 = new THREE.Mesh( anillo, material03 );
+        scene.add( mesh3 )
+        mesh3.position.set(0, 16, 0);
+
+        
+        var anilloluz = new THREE.CylinderGeometry(25, 25, 1, 32 );
+        var material05 = new THREE.MeshStandardMaterial( { color: 0xFFFFFF } );
+        var mesh5 = new THREE.Mesh( anilloluz, material05 );
+        scene.add( mesh5 )
+        mesh5.position.set(0, 19, 0);
+
+        //marciano
+
+        var cabeza1 = new THREE.SphereGeometry(4, 32, 16 );
+        var material11 = new THREE.MeshBasicMaterial( { color: 0x16E305 } );
+        var mesh001 = new THREE.Mesh( cabeza1, material11 );
+        scene.add( mesh001);
+        mesh001.position.set(0, 30, 0);
+
+        var cabeza2 = new THREE.SphereGeometry(4, 32, 16 );
+        var material12 = new THREE.MeshBasicMaterial( { color: 0x16E305 } );
+        var mesh002 = new THREE.Mesh( cabeza2, material12 );
+        scene.add( mesh002);
+        mesh002.position.set(1, 29, 0);
+
+        var cojo1 = new THREE.SphereGeometry(2, 32, 16 );
+        var material13 = new THREE.MeshBasicMaterial( { color: 0x060D05 } );
+        var mesh003 = new THREE.Mesh( cojo1, material13 );
+        scene.add( mesh003);
+        mesh003.position.set(4, 31, 2);
+
+        var cojo2 = new THREE.SphereGeometry(2, 32, 16 );
+        var material14 = new THREE.MeshBasicMaterial( { color: 0x060D05 } );
+        var mesh004 = new THREE.Mesh( cojo2, material14 );
+        scene.add( mesh004);
+        mesh004.position.set(4, 31, -2);
+
+        var anillo = new THREE.CylinderGeometry(1, 2, 10, 32 );
+        var material03 = new THREE.MeshBasicMaterial( { color: 0x16E305} );
+        var mesh3 = new THREE.Mesh( anillo, material03 );
+        scene.add( mesh3 )
+        mesh3.position.set(-2, 25, 0);
+
+ 
+
+
+        
+    var rel = new THREE.Clock();
+    var vel = 2;
+    var amp = 5;
+    function movment (){
+    mesh05.rotation.z = (Math.cos(rel.getElapsedTime()*vel)*amp)+1;
+}
+    function lux() {
+        l1.intensity = (Math.cos(rel.getElapsedTime()*vel)*0.5)+0.5;
+    }
+    
+    //🎰🎰Rendering y animación
+    requestAnimationFrame(render);
+
+    function render() {
+        //🪄🪄 Animación - 
+function lux() {
+    l1.intensity = (Math.cos(rel.getElapsedTime()*vel)*0.5)+0.5;
+    l2.intensity = (Math.cos(rel.getElapsedTime()*vel)*-0.5)+0.5;
+    l3.intensity = (Math.cos(rel.getElapsedTime()*vel)*0.5)+0.5;
+    l4.intensity = (Math.cos(rel.getElapsedTime()*vel)*-0.5)+0.5;
+    l5.intensity = (Math.cos(rel.getElapsedTime()*vel)*0.5)+0.5;
+    l6.intensity = (Math.cos(rel.getElapsedTime()*vel)*-0.5)+0.5;
+}
+        lux();
+    
+        //🎮🎮Actualización del OrbitControls para generar la suavidad de movimiento
+        controls.update();
+    
+        //Llamado para renderizar y volver a llamar a la misma función (render)
+        renderer.render(scene, camera);
+        requestAnimationFrame(render);
+
+        }
+    </script>
+</body>
+</html>
